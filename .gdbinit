@@ -1,3 +1,14 @@
+set $perl = 0
+set $ctx = 0
+
+define getperl
+    if $ctx == 0
+        set $ctx = Perl_get_context()  
+    end
+    set $perl = (PerlInterpreter*)$ctx 
+end
+
+
 define getperl_cored
     set $perl = (PerlInterpreter*)my_perl 
 end
