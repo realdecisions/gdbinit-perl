@@ -29,6 +29,9 @@ define perl_backtrace_cored
       set $line   = $curcop->cop_line
       printf "======================\n"
       printf "file: %s , line %d \n", $file, (int)$line
+      if $curcv != 0
+        print_argv ($cx_stack+$max_stack)->cx_u->cx_blk->blk_u->blku_sub->argarray
+      end
       set $max_stack = $max_stack-1
     end
 end
@@ -42,14 +45,23 @@ define perl_trace_cored
     set $max_stack  = 0
     set $cx_stack   =  $perl->Icurstackinfo->si_cxstack
     while (int)$max_stack >= 0
-      set $curcop = ($cx_stack+$max_stack)->cx_u->cx_blk->blku_oldcop
-      set $curcv  = ($cx_stack+$max_stack)->cx_u->cx_blk->blk_u->blku_sub->cv
+      set $cur_cx = ($cx_stack+$max_stack)
+      set $curcop = $cur_cx->cx_u->cx_blk->blku_oldcop
+      set $curcv  = $cur_cx->cx_u->cx_blk->blk_u->blku_sub->cv
       set $file   = $curcop->cop_file
       set $line   = $curcop->cop_line
       printf "======================\n"
       printf "file: %s , line %d, ", $file, (int)$line
-      if $curcv != 0
-        print_argv ($cx_stack+$max_stack)->cx_u->cx_blk->blk_u->blku_sub->argarray
+      if $curcv
+        if $cur_cx->cx_u
+          if $cur_cx->cx_u->cx_blk
+            if $cur_cx->cx_u->cx_blk->blk_u
+              if $cur_cx->cx_u->cx_blk->blk_u->blku_sub
+                print_argv ($cx_stack+$max_stack)->cx_u->cx_blk->blk_u->blku_sub->argarray
+              end
+            end  
+          end
+        end
       end
       printf "\n"
       set $max_stack = $max_stack+1
@@ -59,25 +71,27 @@ set $undef = "undef"
 
 define print_argv
   set $argarray = (AV*)$arg0
-  set $maxidx   = $argarray->sv_any->xav_max
-  set $curidx   = 0
-  printf "Args count: %d; ",$maxidx+1
-  printf "( "
-  while (int)$curidx <= (int)$maxidx
-    set $argsv = (SV**)(($argarray->sv_u->svu_array)+$curidx)
+  if $argarray != 0 && $argarray->sv_any != 0
+    set $maxidx   = $argarray->sv_any->xav_max
+    set $curidx   = 0
+    printf "Args count: %d; ",$maxidx+1
+    printf "( "
+    while (int)$curidx <= (int)$maxidx
+      set $argsv = (SV**)(($argarray->sv_u->svu_array)+$curidx)
 
-    if $argsv->sv_u->svu_pv != 0
-      printf "%s",$argsv->sv_u->svu_pv
-    else
-      printf "undef"
-    end
+      if $argsv->sv_u->svu_pv != 0
+        printf "%s",$argsv->sv_u->svu_pv
+      else
+        printf "undef"
+      end
 
-    set $curidx = $curidx + 1
-    if $curidx <= $maxidx
-      printf ", "
+      set $curidx = $curidx + 1
+      if $curidx <= $maxidx
+        printf ", "
+      end
     end
+    printf " )\n"
   end
-  printf " )\n"
   set $maxidx = 0
   set $curidx   = 0
 end
