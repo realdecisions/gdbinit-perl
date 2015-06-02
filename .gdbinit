@@ -47,10 +47,41 @@ define perl_trace_cored
       set $file   = $curcop->cop_file
       set $line   = $curcop->cop_line
       printf "======================\n"
-      printf "file: %s , line %d \n", $file, (int)$line
+      printf "file: %s , line %d, ", $file, (int)$line
+      if $curcv != 0
+        print_argv ($cx_stack+$max_stack)->cx_u->cx_blk->blk_u->blku_sub->argarray
+      end
+      printf "\n"
       set $max_stack = $max_stack+1
     end
 end
+set $undef = "undef"
+
+define print_argv
+  set $argarray = (AV*)$arg0
+  set $maxidx   = $argarray->sv_any->xav_max
+  set $curidx   = 0
+  printf "Args count: %d; ",$maxidx+1
+  printf "( "
+  while (int)$curidx <= (int)$maxidx
+    set $argsv = (SV**)(($argarray->sv_u->svu_array)+$curidx)
+
+    if $argsv->sv_u->svu_pv != 0
+      printf "%s",$argsv->sv_u->svu_pv
+    else
+      printf "undef"
+    end
+
+    set $curidx = $curidx + 1
+    if $curidx <= $maxidx
+      printf ", "
+    end
+  end
+  printf " )\n"
+  set $maxidx = 0
+  set $curidx   = 0
+end
+
 
 define longmess
     getperl
