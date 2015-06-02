@@ -80,7 +80,8 @@ define print_argv
       set $argsv = (SV**)(($argarray->sv_u->svu_array)+$curidx)
 
       if $argsv->sv_u->svu_pv != 0
-        printf "%s",$argsv->sv_u->svu_pv
+        printsv $argsv 
+        #printf "%s",$argsv->sv_u->svu_pv
       else
         printf "undef"
       end
@@ -96,6 +97,37 @@ define print_argv
   set $curidx   = 0
 end
 
+set $SVf_IOK = 0x00000100
+set $SVf_NOK = 0x00000200
+set $SVf_POK = 0x00000400
+set $SVf_ROK = 0x00000800
+
+define printsv
+  set $printsv_sv = $arg0
+  if $printsv_sv
+    if $printsv_sv->sv_flags & $SVf_ROK
+        printf "SV(%p)",($printsv_sv)->sv_u->svu_rv
+      else
+        if $printsv_sv->sv_flags & $SVf_IOK
+          printf "%d",($printsv_sv)->sv_u->svu_iv
+        else
+          if $printsv_sv->sv_flags & $SVf_NOK
+            printf "%d",($printsv_sv)->sv_u->svu_nv
+          else
+            if $printsv_sv->sv_flags & $SVf_POK
+              printf "%s",($printsv_sv)->sv_u->svu_pv
+            end
+          end
+        end
+    end
+  else
+    printf "?NullSV?"
+  end
+end
+
+define SvTYPE
+  set $SvTYPE = ((svtype)(($arg0)->sv_flags & 0xff))
+end
 
 define longmess
     getperl
